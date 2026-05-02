@@ -29,7 +29,7 @@ const T = {
     curious:"Exploratory cognitive activity active.",
     proud:"Concept connection signal detected.",
   },
-  hrvOptinTitle:"Add body channel to this record?",
+  hrvOptinTitle:"Camera can measure your heart rate for comparison.",
   hrvOptinYes:"Measure this session",hrvOptinNo:"Skip",
   hrvScanning:"Measuring heart rate signal",hrvError:"Camera access failed",
   textPrompt:"Describe what is not working",
@@ -86,19 +86,42 @@ function localAnalyze(text){
 function checkCrisis(text){return CRISIS_KW.some(w=>text.toLowerCase().includes(w));}
 
 async function claudeAnalyze(text){
-  const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,messages:[{role:"user",content:T.promptAnalysis(text)}]})});
+  const res=await fetch("async function callProxy(messages) {
+  const controller = new AbortController();
+  const timeoutId  = setTimeout(() => controller.abort(), 15000);
+  try {
+    const res = await fetch("/api/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages, max_tokens: 1000 }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    return await res.json();
+  } catch (err) {
+    clearTimeout(timeoutId);
+    throw err;
+  }
+}
+
+async function claudeAnalyze(text) {
+  const data = await callProxy([{ role: "user", content: T.promptAnalysis(text) }]);
+  const raw  = data.content?.map(b => b.text || "").join("").trim();
+  return JSON.parse(raw.replace(/```json|```/g, "").trim());
+}
+
+async function generateBridge(text) {
+  const data   = await callProxy([{ role: "user", content: T.promptBridge(text) }]);
+  const raw    = data.content?.map(b => b.text || "").join("").trim();
+  const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim());
+  return parsed.relevant === false ? null : parsed;
+}",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,messages:[{role:"user",content:T.promptAnalysis(text)}]})});
   const data=await res.json();
   const raw=data.content?.map(b=>b.text||"").join("").trim();
   return JSON.parse(raw.replace(/```json|```/g,"").trim());
 }
 
-async function generateBridge(text){
-  const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,messages:[{role:"user",content:T.promptBridge(text)}]})});
-  const data=await res.json();
-  const raw=data.content?.map(b=>b.text||"").join("").trim();
-  const parsed=JSON.parse(raw.replace(/```json|```/g,"").trim());
-  return parsed.relevant===false?null:parsed;
-}
+
 
 function computeRelationship(emotionState,bpm){
   const highLoad=["stressed","struggling"],resolved=["positive"],exploring=["curious"],neutral=["neutral"];
