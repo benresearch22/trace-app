@@ -257,7 +257,7 @@ function HRV({ onBpm }) {
         rr.current=requestAnimationFrame(loop);
       };
       rr.current=requestAnimationFrame(loop);
-      setTimeout(()=>{if(st!=="done"){setSt("err");sr.current?.getTracks().forEach(t=>t.stop());cancelAnimationFrame(rr.current);}},35000);
+      setTimeout(()=>{if(st==="scan"){setSt("skip");sr.current?.getTracks().forEach(t=>t.stop());cancelAnimationFrame(rr.current);}},35000);
     } catch { setSt("err"); }
   };
 
