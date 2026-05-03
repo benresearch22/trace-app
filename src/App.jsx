@@ -236,16 +236,17 @@ export default function App() {
   const [bLoad, setBLoad] = useState(false);
   const [res,   setRes]   = useState(null);
   const [brid,  setBrid]  = useState(null);
-  const [sel,   setSel]   = useState([]);
-  const [bpm,   setBpm]   = useState(null);
-  const [cris,  setCris]  = useState(false);
-  const [logs,  setLogs]  = useState([]);
+  const [sel,         setSel]         = useState([]);
+  const [bpm,         setBpm]         = useState(null);
+  const [cris,        setCris]        = useState(false);
+  const [logs,        setLogs]        = useState([]);
+  const [showSignals, setShowSignals] = useState(false); // progressive reveal
 
   const toggle = (k) => setSel(p=>p.includes(k)?p.filter(x=>x!==k):[...p,k]);
 
   const record = async () => {
     if(!text.trim()) return;
-    setLoad(true); setBLoad(true); setRes(null); setBrid(null); setSel([]); setBpm(null);
+    setLoad(true); setBLoad(true); setRes(null); setBrid(null); setSel([]); setBpm(null); setShowSignals(false);
     setCris(isCrisis(text));
     try {
       const [r, b] = await Promise.all([
@@ -260,10 +261,10 @@ export default function App() {
     if(!res) return;
     const rel = (res&&bpm) ? relate(res.emotionState, bpm) : null;
     setLogs(p=>[{ text, result:res, bridge:brid, ebtns:[...sel], bpm, rel, time:new Date() }, ...p]);
-    setText(""); setRes(null); setBrid(null); setSel([]); setBpm(null); setCris(false);
+    setText(""); setRes(null); setBrid(null); setSel([]); setBpm(null); setCris(false); setShowSignals(false);
   };
 
-  const clear = () => { setText(""); setRes(null); setBrid(null); setSel([]); setBpm(null); setCris(false); };
+  const clear = () => { setText(""); setRes(null); setBrid(null); setSel([]); setBpm(null); setCris(false); setShowSignals(false); };
 
   // Divergence for state comparison
   const relKey = (res&&bpm) ? relate(res.emotionState, bpm) : sel.length>0&&bpm ? relate(sel[0], bpm) : null;
@@ -319,15 +320,15 @@ export default function App() {
               </div>
             )}
 
-            {/* [2] Science Bridge + Emotion — side by side after Record */}
+            {/* [2] Science Bridge — immediate after Record */}
             {(res||bLoad)&&(
-              <div className="fade" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+              <div className="fade" style={{marginBottom:10}}>
 
-                {/* Left: Science Bridge */}
-                <div style={{background:"#0f172a",border:"1px solid #1e293b",borderRadius:12,padding:16,display:"flex",flexDirection:"column"}}>
+                {/* Science Bridge card */}
+                <div style={{background:"#0f172a",border:"1px solid #1e293b",borderRadius:12,padding:16,marginBottom:10}}>
                   {bLoad&&!brid&&(
-                    <div style={{display:"flex",alignItems:"center",gap:8,flex:1}}>
-                      <Spin/><span style={{fontSize:11,color:"#94a3b8"}}>Finding concepts...</span>
+                    <div style={{display:"flex",alignItems:"center",gap:8}}>
+                      <Spin/><span style={{fontSize:11,color:"#94a3b8"}}>Finding concept connections...</span>
                     </div>
                   )}
                   {!bLoad&&brid&&(
@@ -336,52 +337,60 @@ export default function App() {
                       <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
                         <span style={{fontSize:18}}>{brid.icon}</span>
                         <div>
-                          <div style={{fontSize:12,fontWeight:600,color:"#f8fafc"}}>{brid.domain}</div>
-                          <div style={{fontSize:10,color:"#94a3b8"}}>{brid.concept}</div>
+                          <div style={{fontSize:13,fontWeight:600,color:"#f8fafc"}}>{brid.domain}</div>
+                          <div style={{fontSize:11,color:"#94a3b8"}}>{brid.concept}</div>
                         </div>
                       </div>
                       <div style={{fontSize:10,color:"#94a3b8",fontWeight:500,textTransform:"uppercase",letterSpacing:".06em",marginBottom:3}}>{T.bridgeDiag}</div>
-                      <div style={{fontSize:11,color:"#cbd5e1",lineHeight:1.6,marginBottom:10}}>{brid.diagnosis}</div>
-                      <div style={{fontSize:11,color:"#e2e8f0",lineHeight:1.6,marginBottom:10}} dangerouslySetInnerHTML={{__html:brid.explanation.replace(/\*\*(.*?)\*\*/g,'<strong style="color:#fff">$1</strong>')}}/>
+                      <div style={{fontSize:12,color:"#cbd5e1",lineHeight:1.7,marginBottom:10}}>{brid.diagnosis}</div>
+                      <div style={{fontSize:12,color:"#e2e8f0",lineHeight:1.7,marginBottom:10}} dangerouslySetInnerHTML={{__html:brid.explanation.replace(/\*\*(.*?)\*\*/g,'<strong style="color:#fff">$1</strong>')}}/>
                       {brid.nextStep&&(
-                        <div style={{borderTop:"1px solid #1e293b",paddingTop:8,marginTop:"auto"}}>
+                        <div style={{borderTop:"1px solid #1e293b",paddingTop:8}}>
                           <div style={{fontSize:10,color:"#64748b",textTransform:"uppercase",letterSpacing:".06em",marginBottom:3}}>{T.bridgeNext}</div>
                           <div style={{fontSize:11,color:"#94a3b8",lineHeight:1.5}}>{brid.nextStep}</div>
-                        </div>
-                      )}
-                      {!brid&&!bLoad&&(
-                        <div style={{fontSize:11,color:"#475569",lineHeight:1.5,flex:1,display:"flex",alignItems:"center"}}>
-                          No concept connection detected for this entry.
                         </div>
                       )}
                     </>
                   )}
                   {!bLoad&&!brid&&(
-                    <div style={{display:"flex",flexDirection:"column",gap:4}}>
-                      <div style={{fontFamily:C.mono,fontSize:9,color:"#64748b",textTransform:"uppercase",letterSpacing:".08em",marginBottom:4}}>Science Bridge</div>
+                    <>
+                      <div style={{fontFamily:C.mono,fontSize:9,color:"#64748b",textTransform:"uppercase",letterSpacing:".08em",marginBottom:6}}>Science Bridge</div>
                       <div style={{fontSize:11,color:"#475569",lineHeight:1.6}}>No concept connection detected for this entry.</div>
-                    </div>
+                    </>
                   )}
                 </div>
 
-                {/* Right: Emotion + HRV */}
-                <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,padding:16}}>
-                  <div style={{fontFamily:C.mono,fontSize:9,color:C.mute,textTransform:"uppercase",letterSpacing:".08em",marginBottom:8}}>{T.emotionQ}</div>
-                  <div style={{fontSize:11,color:C.mute,marginBottom:8}}>{T.emotionSub}</div>
-                  <div style={{display:"flex",flexDirection:"column",gap:5}}>
-                    {Object.entries(T.emotions).map(([k,e])=>{
-                      const s=sel.includes(k);
-                      return(
-                        <button key={k} onClick={()=>toggle(k)} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",border:`1.5px solid ${s?e.border:C.border}`,borderRadius:8,background:s?e.bg:C.bg,cursor:"pointer",textAlign:"left",transition:"all .1s"}}>
-                          <span style={{fontSize:15}}>{T.emoji[k]}</span>
-                          <span style={{fontSize:11,fontWeight:s?600:400,color:s?e.color:C.sub,lineHeight:1.2}}>{e.label}</span>
-                        </button>
-                      );
-                    })}
+                {/* Progressive reveal — collapsed by default */}
+                {!showSignals&&(
+                  <button
+                    onClick={()=>setShowSignals(true)}
+                    style={{width:"100%",padding:"12px",background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,fontFamily:C.sans,fontSize:13,color:C.sub,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between"}}
+                  >
+                    <span>Want to add signals?</span>
+                    <span style={{fontSize:11,color:C.mute}}>Emotion · Body signal ↓</span>
+                  </button>
+                )}
+
+                {/* Revealed: Emotion + HRV */}
+                {showSignals&&(
+                  <div className="fade" style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,padding:16,marginBottom:10}}>
+                    <div style={{fontFamily:C.mono,fontSize:9,color:C.mute,textTransform:"uppercase",letterSpacing:".08em",marginBottom:8}}>{T.emotionQ}</div>
+                    <div style={{fontSize:11,color:C.mute,marginBottom:10}}>{T.emotionSub}</div>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:4}}>
+                      {Object.entries(T.emotions).map(([k,e])=>{
+                        const s=sel.includes(k);
+                        return(
+                          <button key={k} onClick={()=>toggle(k)} style={{display:"flex",alignItems:"center",gap:8,padding:"9px 10px",border:`1.5px solid ${s?e.border:C.border}`,borderRadius:8,background:s?e.bg:C.bg,cursor:"pointer",textAlign:"left",transition:"all .1s"}}>
+                            <span style={{fontSize:16}}>{T.emoji[k]}</span>
+                            <span style={{fontSize:11,fontWeight:s?600:400,color:s?e.color:C.sub,lineHeight:1.2}}>{e.label}</span>
+                          </button>
+                        );
+                      })}
+                      <div/>
+                    </div>
+                    <HRV onBpm={b=>setBpm(b)}/>
                   </div>
-                  {/* HRV opt-in inside emotion card */}
-                  <HRV onBpm={b=>setBpm(b)}/>
-                </div>
+                )}
               </div>
             )}
 
