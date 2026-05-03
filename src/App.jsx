@@ -366,7 +366,7 @@ export default function App() {
                     onClick={()=>setShowSignals(true)}
                     style={{width:"100%",padding:"12px",background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,fontFamily:C.sans,fontSize:13,color:C.sub,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between"}}
                   >
-                    <span>Want to add signals?</span>
+                    <span>Want to see more about your state?</span>
                     <span style={{fontSize:11,color:C.mute}}>Emotion · Body signal ↓</span>
                   </button>
                 )}
@@ -431,32 +431,30 @@ export default function App() {
               );
             })()}
 
-            {/* Text Channel detail */}
+            {/* Save button — Text Channel just above */}
             {res&&(
-              <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,padding:18,marginBottom:10}}>
-                <div style={{fontFamily:C.mono,fontSize:9,color:C.mute,textTransform:"uppercase",letterSpacing:".08em",marginBottom:8}}>{T.textCh}</div>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:4}}>
-                  <span style={{fontSize:11,color:C.sub}}>{T.detected}</span>
-                  <span style={{fontFamily:C.mono,fontSize:11,fontWeight:500}}>{T.states[res.emotionState]}</span>
+              <>
+                <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,padding:18,marginBottom:10}}>
+                  <div style={{fontFamily:C.mono,fontSize:9,color:C.mute,textTransform:"uppercase",letterSpacing:".08em",marginBottom:8}}>{T.textCh}</div>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:4}}>
+                    <span style={{fontSize:11,color:C.sub}}>{T.detected}</span>
+                    <span style={{fontFamily:C.mono,fontSize:11,fontWeight:500}}>{T.states[res.emotionState]}</span>
+                  </div>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:4}}>
+                    <span style={{fontSize:11,color:C.sub}}>{T.cogLoad}</span>
+                    <span style={{fontFamily:C.mono,fontSize:11,fontWeight:500,color:cogCol(res.cogLoad||0)}}>{res.cogLoad??"-"}%</span>
+                  </div>
+                  <div style={{height:3,background:C.border,borderRadius:99,overflow:"hidden",marginTop:6}}>
+                    <div style={{height:"100%",width:`${res.cogLoad||0}%`,background:cogCol(res.cogLoad||0),borderRadius:99,transition:"width .8s ease"}}/>
+                  </div>
+                  <div style={{marginTop:8,display:"flex",justifyContent:"flex-end"}}>
+                    <span style={{fontFamily:C.mono,fontSize:9,color:C.mute,textTransform:"uppercase",letterSpacing:".06em"}}>{res.method==="claude"?T.mAI:T.mKW}</span>
+                  </div>
                 </div>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:4}}>
-                  <span style={{fontSize:11,color:C.sub}}>{T.cogLoad}</span>
-                  <span style={{fontFamily:C.mono,fontSize:11,fontWeight:500,color:cogCol(res.cogLoad||0)}}>{res.cogLoad??"-"}%</span>
-                </div>
-                <div style={{height:3,background:C.border,borderRadius:99,overflow:"hidden",marginTop:6}}>
-                  <div style={{height:"100%",width:`${res.cogLoad||0}%`,background:cogCol(res.cogLoad||0),borderRadius:99,transition:"width .8s ease"}}/>
-                </div>
-                <div style={{marginTop:8,display:"flex",justifyContent:"flex-end"}}>
-                  <span style={{fontFamily:C.mono,fontSize:9,color:C.mute,textTransform:"uppercase",letterSpacing:".06em"}}>{res.method==="claude"?T.mAI:T.mKW}</span>
-                </div>
-              </div>
-            )}
-
-            {/* Save button */}
-            {res&&(
-              <button onClick={save} style={{width:"100%",padding:12,background:C.text,color:"#fff",border:"none",borderRadius:10,fontFamily:C.sans,fontSize:13,fontWeight:600,cursor:"pointer"}}>
-                Save to journal
-              </button>
+                <button onClick={save} style={{width:"100%",padding:12,background:C.text,color:"#fff",border:"none",borderRadius:10,fontFamily:C.sans,fontSize:13,fontWeight:600,cursor:"pointer"}}>
+                  Save to journal
+                </button>
+              </>
             )}
 
           </div>
