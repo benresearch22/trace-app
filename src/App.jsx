@@ -157,7 +157,7 @@ function Spin() {
 }
 
 // ─── rPPG ────────────────────────────────────────────────────────────────────
-function HRV({ onBpm }) {
+function HRV({ onBpm, onSkip }) {
   const [st, setSt] = useState("ask");
   const [bpm, setBpm] = useState(null);
   const vr=useRef(), cr=useRef(), sr=useRef(), rr=useRef(), buf=useRef([]);
@@ -209,7 +209,7 @@ function HRV({ onBpm }) {
       <div style={{fontSize:11,color:C.mute,marginBottom:6}}>{T.hrvAsk}</div>
       <div style={{display:"flex",gap:6}}>
         <button onClick={start} style={{flex:1,padding:"7px",background:C.bg,border:`1px solid ${C.border}`,borderRadius:8,fontSize:11,color:C.sub,cursor:"pointer"}}>{T.hrvYes}</button>
-        <button onClick={()=>setSt("skip")} style={{flex:1,padding:"7px",background:"none",border:"none",fontSize:11,color:C.mute,cursor:"pointer"}}>{T.hrvNo}</button>
+        <button onClick={()=>{ setSt("skip"); if(onSkip) onSkip(); }} style={{flex:1,padding:"7px",background:"none",border:"none",fontSize:11,color:C.mute,cursor:"pointer"}}>{T.hrvNo}</button>
       </div>
     </div>
   );
@@ -241,12 +241,13 @@ export default function App() {
   const [cris,        setCris]        = useState(false);
   const [logs,        setLogs]        = useState([]);
   const [showSignals, setShowSignals] = useState(false); // progressive reveal
+  const [step, setStep] = useState(0); // 0=idle 1=bridge 2=emotion 3=hrv 4=compare
 
   const toggle = (k) => setSel(p=>p.includes(k)?p.filter(x=>x!==k):[...p,k]);
 
   const record = async () => {
     if(!text.trim()) return;
-    setLoad(true); setBLoad(true); setRes(null); setBrid(null); setSel([]); setBpm(null); setShowSignals(false);
+    setLoad(true); setBLoad(true); setRes(null); setBrid(null); setSel([]); setBpm(null); setShowSignals(false); setStep(0);
     setCris(isCrisis(text));
     try {
       const [r, b] = await Promise.all([
@@ -254,6 +255,7 @@ export default function App() {
         (async()=>{ try{ return await aiBridge(text);  } catch{ return null; } })(),
       ]);
       setRes(r); setBrid(b);
+      setStep(1);
     } finally { setLoad(false); setBLoad(false); }
   };
 
@@ -264,7 +266,7 @@ export default function App() {
     setText(""); setRes(null); setBrid(null); setSel([]); setBpm(null); setCris(false); setShowSignals(false);
   };
 
-  const clear = () => { setText(""); setRes(null); setBrid(null); setSel([]); setBpm(null); setCris(false); setShowSignals(false); };
+  const clear = () => { setText(""); setRes(null); setBrid(null); setSel([]); setBpm(null); setCris(false); setShowSignals(false); setStep(0); };
 
   // Divergence for state comparison
   const relKey = (res&&bpm) ? relate(res.emotionState, bpm) : sel.length>0&&bpm ? relate(sel[0], bpm) : null;
@@ -320,11 +322,9 @@ export default function App() {
               </div>
             )}
 
-            {/* [2] Science Bridge — immediate after Record */}
-            {(res||bLoad)&&(
+            {/* [2] Science Bridge — step 1 */}
+            {step >= 1 && (
               <div className="fade" style={{marginBottom:10}}>
-
-                {/* Science Bridge card */}
                 <div style={{background:"#0f172a",border:"1px solid #1e293b",borderRadius:12,padding:16,marginBottom:10}}>
                   {bLoad&&!brid&&(
                     <div style={{display:"flex",alignItems:"center",gap:8}}>
@@ -360,42 +360,52 @@ export default function App() {
                   )}
                 </div>
 
-                {/* Progressive reveal — collapsed by default */}
-                {!showSignals&&(
+                {/* Step 1 → 2: prompt for emotion */}
+                {step===1&&!bLoad&&(
                   <button
-                    onClick={()=>setShowSignals(true)}
-                    style={{width:"100%",padding:"12px",background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,fontFamily:C.sans,fontSize:13,color:C.sub,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between"}}
+                    onClick={()=>setStep(2)}
+                    className="fade"
+                    style={{width:"100%",padding:"12px 16px",background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,fontFamily:C.sans,fontSize:13,color:C.sub,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between"}}
                   >
                     <span>Want to see more about your state?</span>
-                    <span style={{fontSize:11,color:C.mute}}>Emotion · Body signal ↓</span>
+                    <span style={{fontSize:11,color:C.mute}}>↓</span>
                   </button>
-                )}
-
-                {/* Revealed: Emotion + HRV */}
-                {showSignals&&(
-                  <div className="fade" style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,padding:16,marginBottom:10}}>
-                    <div style={{fontFamily:C.mono,fontSize:9,color:C.mute,textTransform:"uppercase",letterSpacing:".08em",marginBottom:8}}>{T.emotionQ}</div>
-                    <div style={{fontSize:11,color:C.mute,marginBottom:10}}>{T.emotionSub}</div>
-                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:4}}>
-                      {Object.entries(T.emotions).map(([k,e])=>{
-                        const s=sel.includes(k);
-                        return(
-                          <button key={k} onClick={()=>toggle(k)} style={{display:"flex",alignItems:"center",gap:8,padding:"9px 10px",border:`1.5px solid ${s?e.border:C.border}`,borderRadius:8,background:s?e.bg:C.bg,cursor:"pointer",textAlign:"left",transition:"all .1s"}}>
-                            <span style={{fontSize:16}}>{T.emoji[k]}</span>
-                            <span style={{fontSize:11,fontWeight:s?600:400,color:s?e.color:C.sub,lineHeight:1.2}}>{e.label}</span>
-                          </button>
-                        );
-                      })}
-                      <div/>
-                    </div>
-                    <HRV onBpm={b=>setBpm(b)}/>
-                  </div>
                 )}
               </div>
             )}
 
-            {/* [3] State Comparison */}
-            {showCompare&&(()=>{
+            {/* [3] Emotion — step 2 */}
+            {step >= 2 && (
+              <div className="fade" style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,padding:16,marginBottom:10}}>
+                <div style={{fontFamily:C.mono,fontSize:9,color:C.mute,textTransform:"uppercase",letterSpacing:".08em",marginBottom:8}}>{T.emotionQ}</div>
+                <div style={{fontSize:11,color:C.mute,marginBottom:10}}>{T.emotionSub}</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:4}}>
+                  {Object.entries(T.emotions).map(([k,e])=>{
+                    const s=sel.includes(k);
+                    return(
+                      <button key={k} onClick={()=>{
+                        toggle(k);
+                        if(step===2) setStep(3); // advance to HRV after first selection
+                      }} style={{display:"flex",alignItems:"center",gap:8,padding:"9px 10px",border:`1.5px solid ${s?e.border:C.border}`,borderRadius:8,background:s?e.bg:C.bg,cursor:"pointer",textAlign:"left",transition:"all .1s"}}>
+                        <span style={{fontSize:16}}>{T.emoji[k]}</span>
+                        <span style={{fontSize:11,fontWeight:s?600:400,color:s?e.color:C.sub,lineHeight:1.2}}>{e.label}</span>
+                      </button>
+                    );
+                  })}
+                  <div/>
+                </div>
+              </div>
+            )}
+
+            {/* [4] HRV — step 3 */}
+            {step >= 3 && (
+              <div className="fade" style={{marginBottom:10}}>
+                <HRV onBpm={b=>{setBpm(b); setStep(4);}} onSkip={()=>setStep(4)}/>
+              </div>
+            )}
+
+            {/* [5] State Comparison — step 4 */}
+            {step >= 4 && (sel.length>0||bpm) && (()=>{
               const rel = relKey || "partial";
               const tlbl = sel.length>0 ? sel.map(k=>T.emotions[k]?.label).join(" / ") : T.states[res?.emotionState]||"Neutral";
               const rtxt = rel==="match"?T.relMatch:rel==="divergence"?T.relDiv:T.relPart;
@@ -431,8 +441,8 @@ export default function App() {
               );
             })()}
 
-            {/* Save button — Text Channel just above */}
-            {res&&(
+            {/* Save button — Text Channel just above, step 4 */}
+            {step >= 4 && res&&(
               <>
                 <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,padding:18,marginBottom:10}}>
                   <div style={{fontFamily:C.mono,fontSize:9,color:C.mute,textTransform:"uppercase",letterSpacing:".08em",marginBottom:8}}>{T.textCh}</div>
