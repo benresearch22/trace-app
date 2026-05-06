@@ -161,7 +161,11 @@ function HRV({ onBpm, onSkip }) {
   const [st, setSt] = useState("ask");
   const [bpm, setBpm] = useState(null);
   const vr=useRef(), cr=useRef(), sr=useRef(), rr=useRef(), buf=useRef([]);
+  const stRef=useRef("ask"); // Tracks current status without stale closure issue
   const SR=30, BUF=150;
+
+  // Keep stRef in sync with st state
+  const updateSt=(s)=>{ stRef.current=s; setSt(s); };
 
   function extractBpm(b) {
     const n=b.length, m=b.reduce((a,v)=>a+v,0)/n, x=b.map(v=>v-m);
@@ -174,7 +178,7 @@ function HRV({ onBpm, onSkip }) {
   }
 
   const start = async () => {
-    setSt("scan");
+    updateSt("scan");
     try {
       const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",width:160,height:120,frameRate:{ideal:30}}});
       sr.current=stream; vr.current.srcObject=stream; await vr.current.play();
@@ -190,13 +194,15 @@ function HRV({ onBpm, onSkip }) {
         fc++;
         if(fc%(SR*5)===0&&buf.current.length>=BUF){
           const bv=extractBpm(buf.current);
-          if(bv>=40&&bv<=180){setBpm(bv);setSt("done");onBpm(bv);sr.current?.getTracks().forEach(t=>t.stop());cancelAnimationFrame(rr.current);return;}
+          // Use stRef.current (not st) — reads live value, not stale closure
+          if(bv>=40&&bv<=180){setBpm(bv);updateSt("done");onBpm(bv);sr.current?.getTracks().forEach(t=>t.stop());cancelAnimationFrame(rr.current);return;}
         }
         rr.current=requestAnimationFrame(loop);
       };
       rr.current=requestAnimationFrame(loop);
-      setTimeout(()=>{if(st!=="done"){setSt("skip");sr.current?.getTracks().forEach(t=>t.stop());cancelAnimationFrame(rr.current);}},35000);
-    } catch { setSt("err"); }
+      // Use stRef.current (not st) to avoid stale closure in async setTimeout
+      setTimeout(()=>{if(stRef.current!=="done"){updateSt("skip");sr.current?.getTracks().forEach(t=>t.stop());cancelAnimationFrame(rr.current);}},35000);
+    } catch { updateSt("err"); }
   };
 
   const hidden=<><video ref={vr} style={{display:"none"}} playsInline muted/><canvas ref={cr} width={80} height={60} style={{display:"none"}}/></>;
@@ -209,7 +215,7 @@ function HRV({ onBpm, onSkip }) {
       <div style={{fontSize:11,color:C.mute,marginBottom:6}}>{T.hrvAsk}</div>
       <div style={{display:"flex",gap:6}}>
         <button onClick={start} style={{flex:1,padding:"7px",background:C.bg,border:`1px solid ${C.border}`,borderRadius:8,fontSize:11,color:C.sub,cursor:"pointer"}}>{T.hrvYes}</button>
-        <button onClick={()=>{ setSt("skip"); if(onSkip) onSkip(); }} style={{flex:1,padding:"7px",background:"none",border:"none",fontSize:11,color:C.mute,cursor:"pointer"}}>{T.hrvNo}</button>
+        <button onClick={()=>{ updateSt("skip"); if(onSkip) onSkip(); }} style={{flex:1,padding:"7px",background:"none",border:"none",fontSize:11,color:C.mute,cursor:"pointer"}}>{T.hrvNo}</button>
       </div>
     </div>
   );
